@@ -29,21 +29,9 @@ Each stage is explained in [`docs/JOURNEY.md`](docs/JOURNEY.md): the symptom, th
 
 ## Where it ends up
 
-```mermaid
-flowchart LR
-    U[Users] --> LB[nginx load balancer]
-    U --> CDN[CDN edge]
-    CDN --> S3[(Object storage)]
-    LB --> A1[app] & A2[app] & A3[app]
-    A1 & A2 & A3 --> R[(Redis cache + queue)]
-    A1 & A2 & A3 --> S0[(Shard 0 primary)] & S1[(Shard 1 primary)]
-    S0 -. streams WAL .-> RR[(Shard 0 replica)]
-    A1 & A2 & A3 -. reads .-> RR
-    A1 & A2 & A3 --> S3
-    R --> W1[worker] & W2[worker]
-    W1 & W2 --> S3
-    A1 & A2 & A3 -. metrics/traces .-> O[Prometheus · Grafana · Jaeger]
-```
+![Architecture at stage 9: load balancer and CDN at the edge, three stateless app replicas, Redis for cache and queue, two Postgres shards each with a read replica, object storage, and Prometheus/Grafana/Jaeger for observability](docs/assets/architecture.svg)
+
+Solid arrows are the request path; dashed arrows are replication, async jobs, and telemetry. Each lane in the diagram is one stage from the table above — trace a lane back to its row to see why it's there.
 
 ## Quick start
 
