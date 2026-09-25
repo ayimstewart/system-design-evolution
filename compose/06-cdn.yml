@@ -1,0 +1,16 @@
+# STAGE 6 — Problem: users far away wait forever for images.
+# Fix: serve media through a CDN edge cache.
+# Cost: purging is hard, so use immutable keys (a new file gets a new name).
+services:
+  app:
+    environment:
+      MEDIA_CDN_URL: http://localhost:8080/media
+
+  cdn:
+    image: nginx:1.27-alpine
+    ports:
+      - "8080:80"
+    volumes:
+      - ../infra/nginx/cdn.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - minio

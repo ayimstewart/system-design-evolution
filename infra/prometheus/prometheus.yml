@@ -1,0 +1,11 @@
+global:
+  scrape_interval: 5s
+
+scrape_configs:
+  - job_name: app
+    # Ask Docker DNS for every "app" replica, so scaling needs no config change.
+    dns_sd_configs:
+      - names: [app]
+        type: A
+        port: 8000
+        refresh_interval: 5s

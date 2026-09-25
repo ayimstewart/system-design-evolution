@@ -1,0 +1,29 @@
+# STAGE 5 — Problem: photos and videos bloat the database.
+# Fix: put bytes in object storage (S3 / R2 / MinIO here); the DB keeps a key.
+# Cost: two systems to keep consistent (orphaned files, missing files).
+services:
+  app:
+    environment:
+      S3_ENDPOINT: http://minio:9000
+      S3_BUCKET: media
+      S3_ACCESS_KEY: minioadmin
+      S3_SECRET_KEY: minioadmin
+      S3_PUBLIC_URL: http://localhost:9000/media
+    depends_on:
+      minio:
+        condition: service_started
+
+  minio:
+    image: minio/minio:latest
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"   # S3 API (public image URLs point here)
+      - "9001:9001"   # web console
+    volumes:
+      - minio:/data
+
+volumes:
+  minio:

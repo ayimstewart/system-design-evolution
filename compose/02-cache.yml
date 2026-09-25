@@ -1,0 +1,20 @@
+# STAGE 2 — Problem: every app server hammers the same database.
+# Fix: keep hot reads in Redis.
+# Cost: caches go stale; invalidation is now your job.
+services:
+  app:
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      CACHE_TTL_SECONDS: "30"
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--maxmemory", "128mb", "--maxmemory-policy", "allkeys-lru"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 20

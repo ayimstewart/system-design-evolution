@@ -1,0 +1,27 @@
+# STAGE 8 — Problem: servers crash, regions disappear.
+# Fix: no single copy of anything important; restart what dies; route around it.
+# Cost: more machines, more money, and failover paths you must actually test
+#       (run `make chaos` while `make load` is going).
+#
+# What a laptop can't show: a second region. In production you'd run this whole
+# stack twice and fail over DNS. The idea is the same, just bigger.
+x-restart: &restart
+  restart: unless-stopped
+
+services:
+  app:
+    <<: *restart
+  lb:
+    <<: *restart
+    volumes:
+      - ../infra/nginx/lb-redundant.conf:/etc/nginx/conf.d/default.conf:ro
+  worker:
+    <<: *restart
+    deploy:
+      replicas: 2
+  db-primary: *restart
+  db-replica: *restart
+  db-shard1: *restart
+  redis: *restart
+  minio: *restart
+  cdn: *restart

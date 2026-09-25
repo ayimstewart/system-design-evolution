@@ -1,0 +1,36 @@
+# STAGE 4 — Problem: one database can't hold (or write) it all.
+# Fix: split users across shards by hashing user_id.
+# Cost: cross-shard queries (see /posts/recent), resharding, uneven load.
+#
+# Shard 0 is the original primary (with its replica). Shard 1 is new and has
+# no replica yet. Exercise: give it one.
+# Heads-up: users that now hash to shard 1 will "lose" their old posts, which
+# still sit on shard 0. That's the data-migration problem. `make reset` to start clean.
+services:
+  app:
+    environment:
+      SHARD_URLS: postgresql+psycopg://app:app@db-primary:5432/app,postgresql+psycopg://app:app@db-shard1:5432/app
+      SHARD_REPLICA_URLS: "postgresql+psycopg://app:app@db-replica:5432/app;"
+    depends_on:
+      db-shard1:
+        condition: service_healthy
+
+  db-shard1:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+      POSTGRES_DB: app
+      REPLICATION_PASSWORD: replicator
+    command: ["postgres", "-c", "wal_level=replica", "-c", "max_wal_senders=10", "-c", "max_replication_slots=10"]
+    volumes:
+      - db-shard1:/var/lib/postgresql/data
+      - ../infra/postgres/init-primary.sh:/docker-entrypoint-initdb.d/10-replication.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d app"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  db-shard1:

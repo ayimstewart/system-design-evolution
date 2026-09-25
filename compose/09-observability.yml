@@ -1,0 +1,39 @@
+# STAGE 9 — Problem: you can't see what's breaking.
+# Fix: collect logs, metrics and traces.
+#   Grafana    http://localhost:3000   dashboards (metrics)
+#   Prometheus http://localhost:9090   raw metrics
+#   Jaeger     http://localhost:16686  traces: one request, every hop
+#   Logs       make logs               JSON lines with request ids
+# Cost: storage bills, alert fatigue, and dashboards nobody reads.
+services:
+  app:
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
+      OTEL_SERVICE_NAME: sde-app
+
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ../infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+
+  grafana:
+    image: grafana/grafana:latest
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+      GF_AUTH_DISABLE_LOGIN_FORM: "true"
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/overview.json
+    volumes:
+      - ../infra/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ../infra/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+
+  jaeger:
+    image: jaegertracing/jaeger:latest
+    ports:
+      - "16686:16686"

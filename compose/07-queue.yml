@@ -1,0 +1,26 @@
+# STAGE 7 — Problem: uploads make users wait on slow processing.
+# Fix: enqueue the job, answer 202 immediately, let workers do the work.
+# Cost: queues deliver at-least-once, so jobs must be idempotent (see app/jobs.py).
+services:
+  app:
+    environment:
+      QUEUE_ENABLED: "true"
+
+  worker:
+    build: ../app
+    image: sde-app:latest
+    command: ["rq", "worker", "images", "--url", "redis://redis:6379/0"]
+    environment:
+      SHARD_URLS: postgresql+psycopg://app:app@db-primary:5432/app,postgresql+psycopg://app:app@db-shard1:5432/app
+      SHARD_REPLICA_URLS: "postgresql+psycopg://app:app@db-replica:5432/app;"
+      REDIS_URL: redis://redis:6379/0
+      S3_ENDPOINT: http://minio:9000
+      S3_BUCKET: media
+      S3_ACCESS_KEY: minioadmin
+      S3_SECRET_KEY: minioadmin
+      S3_PUBLIC_URL: http://localhost:9000/media
+      MEDIA_CDN_URL: http://localhost:8080/media
+      PROCESSING_DELAY_SECONDS: "2"
+    depends_on:
+      app:
+        condition: service_healthy
